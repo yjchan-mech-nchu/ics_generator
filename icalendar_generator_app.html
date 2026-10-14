@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>國立中興大學 機械系 行程/會議 .ics 產生器</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-12">
+
+  <!-- Header Section -->
+  <header class="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 text-white shadow-md border-b border-emerald-700/50 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      <div class="flex items-center space-x-3.5">
+        <div class="bg-white/10 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 shadow-inner shrink-0">
+          <i data-lucide="calendar" class="w-7 h-7 text-emerald-300"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="bg-emerald-500/30 text-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30 uppercase tracking-wider">NCHU ME</span>
+            <span class="text-xs text-emerald-200/80 font-medium">國立中興大學 機械工程學系</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white mt-0.5">📅 機械系 行程/會議 .ics 產生器</h1>
+          <p class="text-xs sm:text-sm text-slate-300 mt-0.5">快速建立會議與行程，一鍵匯入 Google 日曆、Apple Calendar 或 Outlook</p>
+        </div>
+      </div>
+      
+      <div class="hidden sm:flex items-center space-x-2 self-end md:self-auto">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+          <span class="w-2 h-2 mr-2 bg-emerald-400 rounded-full animate-pulse"></span> RFC 5545 日曆標準
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+    
+    <!-- Grid Layout: Left Form & Right Realtime Preview -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- LEFT COLUMN: Form / Raw Code / History -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <!-- Navigation Tabs -->
+        <div class="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm flex space-x-1">
+          <button id="tab-btn-form" onclick="switchTab('form')" class="flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 bg-emerald-700 text-white shadow-sm flex justify-center items-center">
+            <i data-lucide="edit-3" class="w-4 h-4 mr-1.5"></i> 編輯會議內容
+          </button>
+          <button id="tab-btn-raw" onclick="switchTab('raw')" class="flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 text-slate-600 hover:bg-slate-100 flex justify-center items-center">
+            <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> ICS 原始碼
+          </button>
+          <button id="tab-btn-history" onclick="switchTab('history')" class="flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 text-slate-600 hover:bg-slate-100 flex justify-center items-center">
+            <i data-lucide="history" class="w-4 h-4 mr-1.5"></i> 歷史紀錄 (<span id="history-count">0</span>)
+          </button>
+        </div>
+
+        <!-- TAB CONTENT 1: FORM -->
+        <div id="tab-content-form" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+          <form id="event-form" onsubmit="event.preventDefault();" class="space-y-6">
+            
+            <!-- Section 1: Event Title & Quick Fill -->
+            <div class="space-y-4">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                <i data-lucide="file-text" class="w-4 h-4 mr-1.5 text-emerald-600"></i> 行程資訊
+              </h3>
+              
+              <!-- Event Title Input -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">行程名稱 <span class="text-red-500">*</span></label>
+                <input type="text" id="event-title" required placeholder="例如：系務會議" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm font-medium text-slate-900">
+                
+                <!-- Quick Fill Buttons for Title -->
+                <div class="mt-2.5 flex flex-wrap gap-1.5 items-center">
+                  <span class="text-xs text-slate-500 font-medium mr-1">快速帶入：</span>
+                  <button type="button" onclick="quickSetTitle('系務會議')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                    🏛️ 系務會議
+                  </button>
+                  <button type="button" onclick="quickSetTitle('系學術委員會')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                    🎓 系學術委員會
+                  </button>
+                  <button type="button" onclick="quickSetTitle('系招生委員會')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                    📝 系招生委員會
+                  </button>
+                  <button type="button" onclick="quickSetTitle('系財務委員會')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                    💰 系財務委員會
+                  </button>
+                  <button type="button" onclick="quickSetTitle('系教評會')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                    ⚖️ 系教評會
+                  </button>
+                  <button type="button" onclick="quickSetTitle('系務發展委員會')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                    🚀 系務發展委員會
+                  </button>
+                </div>
+              </div>
+
+              <!-- Date & Time Options -->
+              <div class="space-y-3 pt-1">
+                
+                <!-- All-Day Switch -->
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div class="flex items-center space-x-2">
+                    <i data-lucide="sun" class="w-4 h-4 text-amber-500"></i>
+                    <span class="text-sm font-medium text-slate-700">全天行程</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="is-all-day" onchange="toggleAllDay(this.checked)" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                <!-- Lunch Meeting Switch (12:00-13:00) -->
+                <div class="flex items-center justify-between bg-amber-50/80 p-3 rounded-xl border border-amber-200">
+                  <div class="flex items-center space-x-2">
+                    <i data-lucide="utensils" class="w-4 h-4 text-amber-600"></i>
+                    <div>
+                      <span class="text-sm font-semibold text-slate-800">午餐會議</span>
+                      <span class="text-xs text-amber-700 ml-1.5 font-medium">(自動設為 12:00 - 13:00)</span>
+                    </div>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="is-lunch-meeting" onchange="toggleLunchMeeting(this.checked)" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                  </label>
+                </div>
+
+              </div>
+
+              <!-- Date & Time Pickers -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <!-- Start Time -->
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">開始時間 <span class="text-red-500">*</span></label>
+                  <input type="datetime-local" id="start-datetime" required onchange="validateDates()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm">
+                  <input type="date" id="start-date" onchange="validateDates()" class="hidden w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm">
+                </div>
+                <!-- End Time -->
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">結束時間 <span class="text-red-500">*</span></label>
+                  <input type="datetime-local" id="end-datetime" required onchange="validateDates()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm">
+                  <input type="date" id="end-date" onchange="validateDates()" class="hidden w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm">
+                </div>
+              </div>
+              <p id="date-error" class="hidden text-xs text-red-500 flex items-center font-medium">
+                <i data-lucide="alert-circle" class="w-3.5 h-3.5 mr-1 shrink-0"></i> 結束時間必須晚於或等於開始時間！
+              </p>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <!-- Section 2: Location -->
+            <div class="space-y-4">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                <i data-lucide="map-pin" class="w-4 h-4 mr-1.5 text-emerald-600"></i> 地點資訊
+              </h3>
+              
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">地點 / 線上連結</label>
+                <input type="text" id="event-location" placeholder="例如：系館400 會議室" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm">
+              </div>
+
+              <!-- Quick Fill Location Buttons -->
+              <div class="flex flex-wrap gap-1.5 items-center">
+                <span class="text-xs text-slate-500 font-medium mr-1">快速帶入地點：</span>
+                <button type="button" onclick="quickSetLocation('系館400 會議室')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                  🏢 系館400 會議室
+                </button>
+                <button type="button" onclick="quickSetLocation('系館201 會議室')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                  🏫 系館201 會議室
+                </button>
+                <button type="button" onclick="quickSetLocation('系館406 會議室')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                  📍 系館406 會議室
+                </button>
+                <button type="button" onclick="quickSetLocation('Google Meet / 線上會議')" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent text-slate-700 rounded-lg font-medium transition-all flex items-center shadow-sm">
+                  💻 Google Meet / 線上會議
+                </button>
+              </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <!-- Section 3: Description & Agenda -->
+            <div class="space-y-4">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                <i data-lucide="align-left" class="w-4 h-4 mr-1.5 text-emerald-600"></i> 行程說明 / 備註
+              </h3>
+              
+              <div>
+                <textarea id="event-description" rows="3" placeholder="填寫討論事項、會議議程或備註細節..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm custom-scrollbar"></textarea>
+              </div>
+
+              <!-- Section 4: Organizer Info (Pre-filled) -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">發起人名稱</label>
+                  <input type="text" id="organizer-name" value="機械系系主任" placeholder="例如：機械系系主任" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">發起人 Email</label>
+                  <input type="email" id="organizer-email" value="rychein@nchu.edu.tw" placeholder="rychein@nchu.edu.tw" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm">
+                </div>
+              </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <!-- Section 5: Advanced Options -->
+            <div class="space-y-4">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                <i data-lucide="sliders" class="w-4 h-4 mr-1.5 text-emerald-600"></i> 進階設定
+              </h3>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Reminder / Alarm -->
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">提醒通知 (VALARM)</label>
+                  <select id="event-alarm" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm bg-white">
+                    <option value="NONE">無提醒</option>
+                    <option value="PT5M">5 分鐘前</option>
+                    <option value="PT15M" selected>15 分鐘前</option>
+                    <option value="PT30M">30 分鐘前</option>
+                    <option value="PT1H">1 小時前</option>
+                    <option value="P1D">1 天前</option>
+                  </select>
+                </div>
+
+                <!-- Recurrence (RRULE) -->
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">重複規則 (RRULE)</label>
+                  <select id="event-recurrence" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm bg-white">
+                    <option value="NONE" selected>無重複</option>
+                    <option value="WEEKLY">每週重複</option>
+                    <option value="MONTHLY">每月重複</option>
+                  </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">行程狀態 (STATUS)</label>
+                  <select id="event-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors text-sm bg-white">
+                    <option value="CONFIRMED" selected>確定 (CONFIRMED)</option>
+                    <option value="TENTATIVE">暫定 (TENTATIVE)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- TAB CONTENT 2: RAW ICS CODE -->
+        <div id="tab-content-raw" class="hidden bg-slate-900 rounded-2xl border border-slate-800 shadow-sm p-6 text-slate-200 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-slate-400">iCalendar Format (RFC 5545)</span>
+            <button onclick="copyRawICS()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors flex items-center border border-slate-700">
+              <i data-lucide="copy" class="w-3.5 h-3.5 mr-1.5"></i> 複製 ICS 語法
+            </button>
+          </div>
+          <pre id="raw-ics-code" class="text-xs font-mono text-emerald-400 bg-slate-950 p-4 rounded-xl overflow-x-auto whitespace-pre-wrap break-all leading-relaxed custom-scrollbar h-96"></pre>
+        </div>
+
+        <!-- TAB CONTENT 3: HISTORY -->
+        <div id="tab-content-history" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-sm font-bold text-slate-800">已儲存的會議紀錄</h3>
+            <button onclick="clearAllHistory()" class="text-xs text-red-600 hover:text-red-700 font-medium flex items-center">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1"></i> 清除歷史紀錄
+            </button>
+          </div>
+          <div id="history-list" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-1">
+            <!-- Dynamic elements loaded via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Realtime Live Preview & Download Actions -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Live Visual Preview Card -->
+        <div class="bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden border border-emerald-800/50">
+          <!-- Background decorative element -->
+          <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div class="relative z-10 space-y-5">
+            <!-- Header Badge & Status -->
+            <div class="flex justify-between items-start">
+              <div class="flex items-center space-x-2">
+                <span class="px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[11px] font-semibold uppercase tracking-wider text-emerald-200 border border-white/10">
+                  即時卡片預覽
+                </span>
+                <span id="preview-status-badge" class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-medium rounded-lg border border-emerald-500/30">
+                  CONFIRMED
+                </span>
+              </div>
+              <span id="preview-recurrence-badge" class="hidden px-2 py-0.5 bg-emerald-500/30 text-emerald-200 text-xs rounded-full border border-emerald-400/30">
+                <i data-lucide="repeat" class="w-3 h-3 inline mr-1"></i> 重複
+              </span>
+            </div>
+
+            <!-- Date Box & Title -->
+            <div class="flex items-start space-x-4">
+              <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 text-center min-w-[64px] border border-white/15 shadow-inner">
+                <span id="preview-month" class="block text-xs font-bold text-emerald-300 uppercase">10 月</span>
+                <span id="preview-day" class="block text-2xl font-black text-white">14</span>
+              </div>
+              <div class="space-y-1 flex-1">
+                <h2 id="preview-title" class="text-xl font-bold leading-snug text-white line-clamp-2">系務會議</h2>
+                <div class="flex items-center text-xs text-emerald-200 space-x-1 font-medium">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 shrink-0"></i>
+                  <span id="preview-time-range">12:00 - 13:00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Event Details -->
+            <div class="space-y-2.5 pt-3 text-xs text-emerald-100/90 border-t border-white/10">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span id="preview-location" class="truncate font-medium">系館400 會議室</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <i data-lucide="bell" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span id="preview-alarm">會議 15 分鐘前提醒</span>
+              </div>
+              <div id="preview-organizer-container" class="flex items-center space-x-2">
+                <i data-lucide="user" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span id="preview-organizer">發起人: 機械系系主任 (rychein@nchu.edu.tw)</span>
+              </div>
+              <div class="pt-1">
+                <p id="preview-description" class="text-emerald-100/80 italic text-xs line-clamp-3 bg-black/20 p-3 rounded-xl border border-white/5">
+                  無詳細說明...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Center Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center">
+            <i data-lucide="download" class="w-4 h-4 mr-2 text-emerald-600"></i> 匯入與同步
+          </h3>
+
+          <!-- Primary Download ICS Button -->
+          <button onclick="downloadICS()" class="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 transition-all duration-150 flex items-center justify-center space-x-2 group active:scale-[0.99]">
+            <i data-lucide="calendar-plus" class="w-5 h-5 group-hover:scale-110 transition-transform"></i>
+            <span>下載 .ics 檔案</span>
+          </button>
+
+          <!-- Secondary Web Calendar Quick Links -->
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <a id="btn-google-cal" href="#" target="_blank" class="px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition-colors flex items-center justify-center space-x-1.5">
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-500"></i>
+              <span>Google 日曆</span>
+            </a>
+            <a id="btn-outlook-cal" href="#" target="_blank" class="px-3 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition-colors flex items-center justify-center space-x-1.5">
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-sky-600"></i>
+              <span>Outlook Web</span>
+            </a>
+          </div>
+
+          <!-- Utility Bar -->
+          <div class="flex items-center justify-between pt-2 text-xs border-t border-slate-100">
+            <button onclick="saveToHistory()" class="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center">
+              <i data-lucide="bookmark-plus" class="w-3.5 h-3.5 mr-1"></i> 儲存至歷史紀錄
+            </button>
+            <button onclick="copyRawICS()" class="text-slate-500 hover:text-slate-700 font-medium flex items-center">
+              <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i> 複製 ICS 原始碼
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl transition-all duration-300 transform translate-y-20 opacity-0 flex items-center space-x-2.5 z-50 text-sm">
+    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+    <span id="toast-msg">已成功處理！</span>
+  </div>
+
+  <script>
+    // Global History Memory
+    let historyData = [];
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', () => {
+      initDefaultDates();
+      loadHistoryFromStorage();
+      updateAll();
+
+      // Form Realtime Listener
+      document.getElementById('event-form').addEventListener('input', updateAll);
+      
+      // Initialize Lucide Icons
+      lucide.createIcons();
+    });
+
+    // Default Date Settings
+    function initDefaultDates() {
+      const now = new Date();
+      now.setHours(12, 0, 0, 0); // Default to today 12:00
+      const end = new Date(now.getTime() + 60 * 60 * 1000); // 13:00
+
+      document.getElementById('start-datetime').value = formatToLocalDatetimeInput(now);
+      document.getElementById('end-datetime').value = formatToLocalDatetimeInput(end);
+      
+      document.getElementById('start-date').value = formatToLocalDateInput(now);
+      document.getElementById('end-date').value = formatToLocalDateInput(end);
+      
+      // Set default Title & Location
+      document.getElementById('event-title').value = '系務會議';
+      document.getElementById('event-location').value = '系館400 會議室';
+      document.getElementById('is-lunch-meeting').checked = true;
+    }
+
+    function formatToLocalDatetimeInput(date) {
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function formatToLocalDateInput(date) {
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    // Toggle All-Day Event Switch
+    function toggleAllDay(isAllDay) {
+      if (isAllDay) {
+        const lunchCb = document.getElementById('is-lunch-meeting');
+        if (lunchCb) lunchCb.checked = false;
+      }
+
+      const startDt = document.getElementById('start-datetime');
+      const endDt = document.getElementById('end-datetime');
+      const startDate = document.getElementById('start-date');
+      const endDate = document.getElementById('end-date');
+
+      if (isAllDay) {
+        startDt.classList.add('hidden');
+        endDt.classList.add('hidden');
+        startDate.classList.remove('hidden');
+        endDate.classList.remove('hidden');
+
+        if (startDt.value) startDate.value = startDt.value.split('T')[0];
+        if (endDt.value) endDate.value = endDt.value.split('T')[0];
+      } else {
+        startDt.classList.remove('hidden');
+        endDt.classList.remove('hidden');
+        startDate.classList.add('hidden');
+        endDate.classList.add('hidden');
+
+        if (startDate.value) startDt.value = `${startDate.value}T12:00`;
+        if (endDate.value) endDt.value = `${endDate.value}T13:00`;
+      }
+      updateAll();
+    }
+
+    // Toggle Lunch Meeting Switch (Auto Sets 12:00 - 13:00)
+    function toggleLunchMeeting(isLunch) {
+      if (isLunch) {
+        // Uncheck All-day if active
+        const allDayCb = document.getElementById('is-all-day');
+        if (allDayCb && allDayCb.checked) {
+          allDayCb.checked = false;
+          toggleAllDay(false);
+        }
+
+        const startDtInput = document.getElementById('start-datetime');
+        const endDtInput = document.getElementById('end-datetime');
+        
+        let dateStr = '';
+        if (startDtInput.value) {
+          dateStr = startDtInput.value.split('T')[0];
+        } else {
+          const startDateInput = document.getElementById('start-date');
+          dateStr = startDateInput.value || formatToLocalDateInput(new Date());
+        }
+
+        startDtInput.value = `${dateStr}T12:00`;
+        endDtInput.value = `${dateStr}T13:00`;
+      }
+      updateAll();
+    }
+
+    // Validate Start / End Dates
+    function validateDates() {
+      const isAllDay = document.getElementById('is-all-day').checked;
+      let start, end;
+
+      if (isAllDay) {
+        start = new Date(document.getElementById('start-date').value);
+        end = new Date(document.getElementById('end-date').value);
+      } else {
+        start = new Date(document.getElementById('start-datetime').value);
+        end = new Date(document.getElementById('end-datetime').value);
+      }
+
+      const errorEl = document.getElementById('date-error');
+      if (end < start) {
+        errorEl.classList.remove('hidden');
+        return false;
+      } else {
+        errorEl.classList.add('hidden');
+        return true;
+      }
+    }
+
+    // Quick Fill Helper for Title
+    function quickSetTitle(title) {
+      document.getElementById('event-title').value = title;
+      updateAll();
+    }
+
+    // Quick Fill Helper for Location
+    function quickSetLocation(loc) {
+      document.getElementById('event-location').value = loc;
+      updateAll();
+    }
+
+    // Collect Form Values
+    function getFormData() {
+      const isAllDay = document.getElementById('is-all-day').checked;
+      return {
+        title: document.getElementById('event-title').value.trim() || '未命名會議',
+        isAllDay: isAllDay,
+        startStr: isAllDay ? document.getElementById('start-date').value : document.getElementById('start-datetime').value,
+        endStr: isAllDay ? document.getElementById('end-date').value : document.getElementById('end-datetime').value,
+        location: document.getElementById('event-location').value.trim(),
+        description: document.getElementById('event-description').value.trim(),
+        organizerName: document.getElementById('organizer-name').value.trim(),
+        organizerEmail: document.getElementById('organizer-email').value.trim(),
+        alarm: document.getElementById('event-alarm').value,
+        recurrence: document.getElementById('event-recurrence').value,
+        status: document.getElementById('event-status').value
+      };
+    }
+
+    // Escape Special ICS Characters
+    function escapeICS(text) {
+      if (!text) return '';
+      return text
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+    }
+
+    // Convert Local Date to UTC ICS Format (YYYYMMDDTHHMMSSZ)
+    function formatDateToICSUTC(date) {
+      const pad = (n) => n.toString().padStart(2, '0');
+      return date.getUTCFullYear().toString() +
+        pad(date.getUTCMonth() + 1) +
+        pad(date.getUTCDate()) + 'T' +
+        pad(date.getUTCHours()) +
+        pad(date.getUTCMinutes()) +
+        pad(date.getUTCSeconds()) + 'Z';
+    }
+
+    // Convert Date YYYY-MM-DD to YYYYMMDD
+    function formatDateOnlyToICS(dateStr) {
+      if (!dateStr) return '';
+      return dateStr.replace(/-/g, '');
+    }
+
+    // Generate Standard RFC 5545 .ics Output
+    function generateICSContent(data) {
+      const now = new Date();
+      const dtStamp = formatDateToICSUTC(now);
+      const uid = Date.now() + '-' + Math.random().toString(36).substring(2, 9) + '@nchu-me';
+
+      let dtStartStr = '';
+      let dtEndStr = '';
+
+      if (data.isAllDay) {
+        dtStartStr = `DTSTART;VALUE=DATE:${formatDateOnlyToICS(data.startStr)}`;
+        const endDateObj = new Date(data.endStr);
+        endDateObj.setDate(endDateObj.getDate() + 1);
+        const endDateFormatted = formatDateOnlyToICS(formatToLocalDateInput(endDateObj));
+        dtEndStr = `DTEND;VALUE=DATE:${endDateFormatted}`;
+      } else {
+        const startDateObj = new Date(data.startStr);
+        const endDateObj = new Date(data.endStr);
+        dtStartStr = `DTSTART:${formatDateToICSUTC(startDateObj)}`;
+        dtEndStr = `DTEND:${formatDateToICSUTC(endDateObj)}`;
+      }
+
+      let lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//NCHU ME Department//ZH-TW',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtStamp}`,
+        `STATUS:${data.status}`,
+        dtStartStr,
+        dtEndStr,
+        `SUMMARY:${escapeICS(data.title)}`
+      ];
+
+      if (data.location) {
+        lines.push(`LOCATION:${escapeICS(data.location)}`);
+      }
+
+      if (data.description) {
+        lines.push(`DESCRIPTION:${escapeICS(data.description)}`);
+      }
+
+      if (data.organizerEmail) {
+        const cn = data.organizerName ? `;CN=${escapeICS(data.organizerName)}` : '';
+        lines.push(`ORGANIZER${cn}:mailto:${data.organizerEmail}`);
+      }
+
+      if (data.recurrence && data.recurrence !== 'NONE') {
+        lines.push(`RRULE:FREQ=${data.recurrence}`);
+      }
+
+      if (data.alarm && data.alarm !== 'NONE') {
+        lines.push(
+          'BEGIN:VALARM',
+          `TRIGGER:-${data.alarm}`,
+          'ACTION:DISPLAY',
+          `DESCRIPTION:會議提醒: ${escapeICS(data.title)}`,
+          'END:VALARM'
+        );
+      }
+
+      lines.push('END:VEVENT', 'END:VCALENDAR');
+
+      return lines.join('\r\n');
+    }
+
+    // Main Update Function
+    function updateAll() {
+      const data = getFormData();
+
+      // 1. Update Preview Card Date & Title
+      const startDate = data.startStr ? new Date(data.startStr) : new Date();
+      const months = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月'];
+      
+      document.getElementById('preview-month').innerText = months[startDate.getMonth()] || '10 月';
+      document.getElementById('preview-day').innerText = startDate.getDate() || '14';
+      document.getElementById('preview-title').innerText = data.title;
+      document.getElementById('preview-status-badge').innerText = data.status;
+
+      // Time Range Formatting
+      if (data.isAllDay) {
+        document.getElementById('preview-time-range').innerText = `全天行程 (${data.startStr} ~ ${data.endStr})`;
+      } else {
+        const startDt = new Date(data.startStr);
+        const endDt = new Date(data.endStr);
+        const pad = (n) => n.toString().padStart(2, '0');
+        const startTimeStr = isNaN(startDt) ? '12:00' : `${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
+        const endTimeStr = isNaN(endDt) ? '13:00' : `${pad(endDt.getHours())}:${pad(endDt.getMinutes())}`;
+        document.getElementById('preview-time-range').innerText = `${startTimeStr} - ${endTimeStr}`;
+      }
+
+      // Recurrence Badge
+      const recurrenceBadge = document.getElementById('preview-recurrence-badge');
+      if (data.recurrence !== 'NONE') {
+        recurrenceBadge.classList.remove('hidden');
+      } else {
+        recurrenceBadge.classList.add('hidden');
+      }
+
+      // Location
+      document.getElementById('preview-location').innerText = data.location || '未設定地點';
+
+      // Alarm Mapping
+      const alarmMap = {
+        'NONE': '無提醒',
+        'PT5M': '會議 5 分鐘前提醒',
+        'PT15M': '會議 15 分鐘前提醒',
+        'PT30M': '會議 30 分鐘前提醒',
+        'PT1H': '會議 1 小時前提醒',
+        'P1D': '會議 1 天前提醒'
+      };
+      document.getElementById('preview-alarm').innerText = alarmMap[data.alarm] || '15 分鐘前提醒';
+
+      // Organizer
+      const orgContainer = document.getElementById('preview-organizer-container');
+      if (data.organizerName || data.organizerEmail) {
+        orgContainer.classList.remove('hidden');
+        document.getElementById('preview-organizer').innerText = `發起人: ${data.organizerName || ''} ${data.organizerEmail ? `(${data.organizerEmail})` : ''}`;
+      } else {
+        orgContainer.classList.add('hidden');
+      }
+
+      // Description
+      document.getElementById('preview-description').innerText = data.description || '無詳細說明...';
+
+      // 2. Update Raw Code View
+      const rawICS = generateICSContent(data);
+      document.getElementById('raw-ics-code').innerText = rawICS;
+
+      // 3. Update Calendar Direct Links
+      updateCalendarLinks(data);
+    }
+
+    // Direct Calendar Integration Links
+    function updateCalendarLinks(data) {
+      // Google Calendar Link
+      let gUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+      gUrl += `&text=${encodeURIComponent(data.title)}`;
+
+      if (data.isAllDay) {
+        const s = formatDateOnlyToICS(data.startStr);
+        const endDateObj = new Date(data.endStr);
+        endDateObj.setDate(endDateObj.getDate() + 1);
+        const e = formatDateOnlyToICS(formatToLocalDateInput(endDateObj));
+        gUrl += `&dates=${s}/${e}`;
+      } else {
+        const s = formatDateToICSUTC(new Date(data.startStr));
+        const e = formatDateToICSUTC(new Date(data.endStr));
+        gUrl += `&dates=${s}/${e}`;
+      }
+
+      if (data.location) gUrl += `&location=${encodeURIComponent(data.location)}`;
+      if (data.description) gUrl += `&details=${encodeURIComponent(data.description)}`;
+      if (data.recurrence && data.recurrence !== 'NONE') gUrl += `&recur=RRULE:FREQ=${data.recurrence}`;
+
+      document.getElementById('btn-google-cal').href = gUrl;
+
+      // Outlook Web Link
+      let oUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
+      oUrl += `&subject=${encodeURIComponent(data.title)}`;
+      
+      if (data.isAllDay) {
+        oUrl += `&startdt=${data.startStr}&enddt=${data.endStr}&allday=true`;
+      } else {
+        oUrl += `&startdt=${new Date(data.startStr).toISOString()}&enddt=${new Date(data.endStr).toISOString()}`;
+      }
+
+      if (data.location) oUrl += `&location=${encodeURIComponent(data.location)}`;
+      if (data.description) oUrl += `&body=${encodeURIComponent(data.description)}`;
+
+      document.getElementById('btn-outlook-cal').href = oUrl;
+    }
+
+    // Trigger Download .ics
+    function downloadICS() {
+      if (!validateDates()) return;
+
+      const data = getFormData();
+      const icsString = generateICSContent(data);
+      
+      const blob = new Blob([icsString], { type: 'text/calendar;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      const safeTitle = data.title.replace(/[\\/:*?"<>|]/g, '_') || 'event';
+      a.download = `${safeTitle}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      showToast('🎉 .ics 檔案已開始下載！');
+      saveToHistory(false);
+    }
+
+    // Copy Raw ICS
+    function copyRawICS() {
+      const icsString = generateICSContent(getFormData());
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(icsString).then(() => {
+          showToast('📋 已複製 ICS 原始碼至剪貼簿！');
+        });
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = icsString;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('📋 已複製 ICS 原始碼至剪貼簿！');
+      }
+    }
+
+    // Tab Switcher
+    function switchTab(tab) {
+      const btnForm = document.getElementById('tab-btn-form');
+      const btnRaw = document.getElementById('tab-btn-raw');
+      const btnHistory = document.getElementById('tab-btn-history');
+
+      const contentForm = document.getElementById('tab-content-form');
+      const contentRaw = document.getElementById('tab-content-raw');
+      const contentHistory = document.getElementById('tab-content-history');
+
+      [btnForm, btnRaw, btnHistory].forEach(b => {
+        b.className = 'flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 text-slate-600 hover:bg-slate-100 flex justify-center items-center';
+      });
+
+      [contentForm, contentRaw, contentHistory].forEach(c => c.classList.add('hidden'));
+
+      if (tab === 'form') {
+        btnForm.className = 'flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 bg-emerald-700 text-white shadow-sm flex justify-center items-center';
+        contentForm.classList.remove('hidden');
+      } else if (tab === 'raw') {
+        btnRaw.className = 'flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 bg-emerald-700 text-white shadow-sm flex justify-center items-center';
+        contentRaw.classList.remove('hidden');
+      } else if (tab === 'history') {
+        btnHistory.className = 'flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150 bg-emerald-700 text-white shadow-sm flex justify-center items-center';
+        contentHistory.classList.remove('hidden');
+        renderHistoryUI();
+      }
+    }
+
+    // LocalStorage Operations
+    function saveToHistory(notify = true) {
+      const data = getFormData();
+      data.id = Date.now();
+      data.savedAt = new Date().toLocaleString('zh-TW');
+
+      historyData.unshift(data);
+      if (historyData.length > 20) historyData.pop();
+
+      localStorage.setItem('nchu_me_ical_history', JSON.stringify(historyData));
+      document.getElementById('history-count').innerText = historyData.length;
+
+      if (notify) showToast('💾 會議紀錄已儲存！');
+    }
+
+    function loadHistoryFromStorage() {
+      try {
+        const stored = localStorage.getItem('nchu_me_ical_history');
+        if (stored) {
+          historyData = JSON.parse(stored);
+          document.getElementById('history-count').innerText = historyData.length;
+        }
+      } catch (e) {
+        historyData = [];
+      }
+    }
+
+    function renderHistoryUI() {
+      const container = document.getElementById('history-list');
+      if (historyData.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-slate-400 text-xs">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+            尚無儲存的紀錄
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = historyData.map((item, idx) => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between space-x-3">
+          <div class="flex-1 min-w-0">
+            <h4 class="text-xs font-bold text-slate-800 truncate">${item.title}</h4>
+            <p class="text-[11px] text-slate-500">${item.startStr} | ${item.location || '無地點'}</p>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0">
+            <button onclick="restoreHistoryItem(${idx})" class="p-1.5 text-xs text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors" title="載入至表單">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="deleteHistoryItem(${idx})" class="p-1.5 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="刪除">
+              <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function restoreHistoryItem(idx) {
+      const item = historyData[idx];
+      if (!item) return;
+
+      document.getElementById('event-title').value = item.title;
+      document.getElementById('is-all-day').checked = item.isAllDay;
+      toggleAllDay(item.isAllDay);
+
+      if (item.isAllDay) {
+        document.getElementById('start-date').value = item.startStr;
+        document.getElementById('end-date').value = item.endStr;
+      } else {
+        document.getElementById('start-datetime').value = item.startStr;
+        document.getElementById('end-datetime').value = item.endStr;
+      }
+
+      document.getElementById('event-location').value = item.location || '';
+      document.getElementById('event-description').value = item.description || '';
+      document.getElementById('organizer-name').value = item.organizerName || '機械系系主任';
+      document.getElementById('organizer-email').value = item.organizerEmail || 'rychein@nchu.edu.tw';
+      document.getElementById('event-alarm').value = item.alarm || 'PT15M';
+      document.getElementById('event-recurrence').value = item.recurrence || 'NONE';
+      document.getElementById('event-status').value = item.status || 'CONFIRMED';
+
+      switchTab('form');
+      updateAll();
+      showToast('已載入會議資料！');
+    }
+
+    function deleteHistoryItem(idx) {
+      historyData.splice(idx, 1);
+      localStorage.setItem('nchu_me_ical_history', JSON.stringify(historyData));
+      document.getElementById('history-count').innerText = historyData.length;
+      renderHistoryUI();
+    }
+
+    function clearAllHistory() {
+      historyData = [];
+      localStorage.removeItem('nchu_me_ical_history');
+      document.getElementById('history-count').innerText = '0';
+      renderHistoryUI();
+      showToast('已清除歷史紀錄！');
+    }
+
+    // Toast Notification Banner
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
